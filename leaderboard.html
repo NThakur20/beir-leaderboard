@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BEIR Leaderboard</title>
+
+    <!-- development version, includes helpful console warnings -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+
+    <!-- Vue.js -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.12/vue.min.js" integrity="sha512-BKbSR+cfyxLdMAsE0naLReFSLg8/pjbgfxHh/k/kUC82Hy7r6HtR5hLhobaln2gcTvzkyyehrdREdjpsQwy2Jw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+            integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+            integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+            integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+            crossorigin="anonymous"></script>
+
+    <!-- Axios -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js" integrity="sha512-bZS47S7sPOxkjU/4Bt0zrhEtWx0y0CRkhEp8IckzK+ltifIIE9EMIMTuT/mEzoIMewUINruDBIR/jJnbguonqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Font-awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+          integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+
+    <!-- Lodash -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"
+            integrity="sha512-WFN04846sdKMIP5LKNphMaWzU7YpMyCU245etK3g/2ARYbPK9Ub18eG+ljU96qKRCWh+quCY7yefSmlkQw1ANQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <style>
+        .fa-active {
+            color: #337ab7;
+        }
+
+
+        .header-cell {
+            cursor: pointer;
+        }
+
+        .models-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #ffffff;
+        }
+
+
+        .info-icon {
+            color: #cccccc;
+        }
+
+        .info-icon-disabled {
+            color: #cccccc;
+        }
+
+        .link-active, .toggle-active, .info-icon-active, .info-icon:hover {
+            color: #0056b3;
+        }
+
+        .info-icon-model {
+            padding-left: 10px;
+        }
+
+        .bs-popover-auto[x-placement^=bottom], .bs-popover-bottom {
+            margin-top: .5rem;
+        }
+
+        .popover {
+            max-width: 400px;
+        }
+
+        .toggle-link {
+            text-decoration: none;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .toggle-link:hover, .toggle-link:focus {
+            text-decoration: none;
+        }
+
+         .toggle-inactive, .toggle-inactive:hover, .toggle-inactive:focus {
+             color: #333;
+         }
+
+        body {
+            margin: 20px;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>BEIR Leaderboard</h1>
+
+
+<div id="app">
+
+    <!-- Datasets -->
+    <b>Datasets</b>:
+    <div class="d-flex flex-row flex-wrap m-2" style="max-width: 600px; border: 1px solid;">
+        <div v-for="(dataset, key) in datasets" class="px-2">
+            <label><input type="checkbox" v-model="dataset.show"> {{dataset.name}}</label>
+        </div>
+    </div>
+
+    <b>Models</b>
+    <div class="m-2" style="max-width: 600px; border: 1px solid;">
+        <div v-for="(model_names, group_name) in model_types" class="px-2">
+            <b>{{group_name}}</b><br>
+            <div v-for="model_name in model_names" class="px-2">
+                <label><input type="checkbox" v-model="selected_models" :value="model_name"> {{model_name}}<br></label>
+            </div>
+        </div>
+    </div>
+    
+
+    <br><br>
+
+    <!-- Leaderboard table -->
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>
+                    Model Name
+                </th>
+
+                <template v-for="(dataset, key) in datasets">
+                    <th v-if="dataset.show" class="header-cell text-center" @click="sortAsc = (sortBy==key) ? sortAsc = !sortAsc : false; sortBy=key">
+                        <i class="fas fa-active" v-if="sortBy == key" v-bind:class="{ 'fa-sort-amount-up': !sortAsc, 'fa-sort-amount-down-alt': sortAsc }"></i>
+                        {{dataset.name}}
+                    </th>
+                </template>
+                <th class="header-cell text-center" @click="sortAsc = (sortBy=='avg') ? sortAsc = !sortAsc : false; sortBy='avg'">
+                        <i class="fas fa-active" v-if="sortBy == 'avg'" v-bind:class="{ 'fa-sort-amount-up': !sortAsc, 'fa-sort-amount-down-alt': sortAsc }"></i>
+                        Avg.
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <template v-if="sortedModels.length > 0" v-for="model in sortedModels">
+                <tr>
+                    <td>{{model.name}} ({{model.type}})</td>
+
+                    <template v-for="(dataset, dataset_key) in datasets">
+                        <td v-if="dataset.show" class="text-center" v-bind:style="compute_style(model, dataset_key)">
+                            <template v-if="dataset_key in model.scores && model.scores[dataset_key][score]">
+                                {{(model.scores[dataset_key][score]*100).toFixed(2)}}
+                            </template>
+                            <template v-else>
+                                -
+                            </template>
+                        </td>
+                    </template>
+                    <td class="text-center" v-bind:style="compute_style(model, 'avg')">
+                        <template v-if="'avg' in model.scores && model.scores['avg'][score]">
+                            {{(model.scores['avg'][score]*100).toFixed(2)}}
+                        </template>
+                        <template v-else>
+                            -
+                        </template>
+                    </td>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            show_all_models: false,
+            models: [],
+            model_types: {},
+            selected_models: ["ANCE", "TAS-B", "multi-qa-mpnet-base-dot-v1", "gtr-t5-base", "BM25"],
+            datasets: {
+                arguana: {
+                    name: "ArguAna",
+                    show: true,
+                    desc: "",
+                },
+                bioasq: {
+                    name: "BioASQ",
+                    show: false,
+                    desc: "",
+                },
+                "climate-fever": {
+                    name: "Climate-FEVER",
+                    show: false,
+                    desc: "",
+                },
+                cqadupstack: {
+                    name: "CQADupStack",
+                    show: false,
+                    desc: "",
+                },
+                "dbpedia-entity": {
+                    name: "DBPedia",
+                    show: true,
+                    desc: "",
+                },
+                fever: {
+                    name: "FEVER",
+                    show: false,
+                    desc: "",
+                },
+                fiqa: {
+                    name: "FiQA",
+                    show: true,
+                    desc: "",
+                },
+                hotpotqa: {
+                    name: "HotpotQA",
+                    show: true,
+                    desc: "",
+                },
+                nfcorpus: {
+                    name: "NFCorpus",
+                    show: true,
+                    desc: "",
+                },
+                nq: {
+                    name: "NQ",
+                    show: true,
+                    desc: "",
+                },
+                quora: {
+                    name: "Quora",
+                    show: true,
+                    desc: "Duplicate Questions",
+                },
+                robust04: {
+                    name: "Robust04",
+                    show: true,
+                    desc: "",
+                },
+                scidocs: {
+                    name: "SCIDOCS",
+                    show: true,
+                    desc: "",
+                },
+                scifact: {
+                    name: "SciFact",
+                    show: true,
+                    desc: "",
+                },
+                "signal1m": {
+                    name: "Signal-1M",
+                    show: false,
+                    desc: "",
+                },
+                "trec-covid": {
+                    name: "TREC-COVID",
+                    show: true,
+                    desc: "",
+                },
+                "trec-news": {
+                    name: "TREC-News",
+                    show: true,
+                    desc: "",
+                },
+                "webis-touche2020": {
+                    name: "Touché-2020",
+                    show: true,
+                    desc: "",
+                }
+            },
+            score: 'ndcg@10',
+            sortBy: 'avg',
+            sortAsc: false
+        },
+        methods: {
+            compute_style: function(model, dataset) {
+                 if(!(dataset in model.scores) || model.scores[dataset][this.score] === null) {
+                     return {};
+                 }
+                 let percentage = model.scores[dataset].percentage;
+
+                 if(percentage < 0.5) {  //Red fields
+                    let opacity = 1-percentage*2;
+                    return {
+                        backgroundColor: 'rgba(255, 0, 0, '+(opacity/2)+')'
+                    }
+                } else {    //Green fields
+                    let opacity = 2*percentage-1;
+                    return {
+                        backgroundColor: 'rgba(0, 255, 0, '+(opacity/2)+')'
+                    }
+                }
+            }
+        },
+        created: function(){
+            //Load models.json
+            axios.get("https://raw.githubusercontent.com/NThakur20/beir-leaderboard/main/models.json")
+            .then(function (response) {
+                    console.log(response.data)
+                    this.models = response.data;
+
+                    for(let model_name in this.models) {
+                        let model = this.models[model_name]
+
+                        //Compute model.type => model mapping
+                        if(model.type !== undefined) {
+                            if(!(model.type in this.model_types)) {
+                                this.model_types[model.type] = [];
+                            }
+                            this.model_types[model.type].push(model.name)
+                        }
+                    }
+
+
+                    //Sort model types
+                    for(let model_type in this.model_types) {
+                        this.model_types[model_type] = this.model_types[model_type].sort();
+                    }
+
+
+                }.bind(this));
+
+        },
+        computed: {
+            sortedModels: function() {
+                //Select models we want to show
+                let models_list = [];
+                for(let model_key of this.selected_models) {
+                    if(model_key in this.models) {
+                        models_list.push(this.models[model_key]);
+                    }
+                }
+
+                if(models_list.length == 0) {
+                    return models_list;
+                }
+
+                //Compute the average
+                for(let model of models_list) {
+                    let sum = 0;
+                    let num_datasets = 0;
+
+                    for(let name in this.datasets) {
+                        let dataset = this.datasets[name];
+                        if(dataset.show) {
+                            if(!(name in model.scores)) {
+                                sum = null;
+                                break
+                            } else {
+                                sum += model.scores[name][this.score]
+                                num_datasets += 1
+                            }
+                        }
+                    }
+                    model.scores.avg = {};
+                    model.scores.avg[this.score] = (sum !== null) ? sum / num_datasets : null;
+                }
+
+
+
+                //Compute min/max for datasets
+                let v_datasets = Object.keys(this.datasets);
+                v_datasets.push("avg")
+
+                let min_scores = {};
+                let max_scores = {}
+                for(let dataset of v_datasets) {
+                    min_scores[dataset] = 1;
+                    max_scores[dataset] = 0;
+                }
+
+                for(let model of models_list) {
+                    for(let dataset in model.scores) {
+                        if(dataset in min_scores) {
+                            min_scores[dataset] = Math.min(min_scores[dataset], model.scores[dataset][this.score] || 1);
+                            max_scores[dataset] = Math.max(max_scores[dataset], model.scores[dataset][this.score] || 0);
+                        }
+                    }
+                }
+
+                console.log("min", min_scores);
+                console.log("max", max_scores);
+
+                //Compute score relative percentage from top score minus min score
+                for(let model of models_list) {
+                    for (let dataset in model.scores) {
+                        model.scores[dataset].percentage = (model.scores[dataset][this.score] - min_scores[dataset]) / (max_scores[dataset] - min_scores[dataset]);
+                    }
+                }
+
+
+                models_list = _.orderBy(models_list, (item) => (this.sortBy in item['scores'] && item['scores'][this.sortBy][this.score] !== null) ? item['scores'][this.sortBy][this.score] : (this.sortAsc ? 9999 : -9999), this.sortAsc ? 'asc' : 'desc')
+                console.log(models_list)
+
+                return models_list;
+            }
+        }
+    })
+</script>
+
+<script>
+    $(function () {
+      $('[data-toggle="popover"]').popover()
+    });
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
+</script>
+
+
+</body>
+</html>
